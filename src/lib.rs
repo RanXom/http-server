@@ -1,4 +1,5 @@
 use std::thread;
+use std::sync::mpsc;
 
 #[derive(Debug)]
 pub enum PoolCreationError {
@@ -7,6 +8,27 @@ pub enum PoolCreationError {
 
 pub struct ThreadPool {
     workers: Vec<Worker>,
+    sender: mpsc::Sender<Job>
+}
+
+struct Worker {
+    id: usize,
+    thread: thread::JoinHandle<()>,
+}
+
+struct Job;
+
+impl Worker {
+    fn new(id: usize, receiver: mpsc::Receiver<Job>) -> Worker {
+        let thread = thread::spawn(|| {
+            receiver;
+        });
+
+        Worker {
+            id,
+            thread,
+        }
+    }
 }
 
 impl ThreadPool {
@@ -15,14 +37,17 @@ impl ThreadPool {
             return Err(PoolCreationError::ZeroSize)
         }
 
+        let (sender, receiver) = mpsc::channel();
+
         let mut workers = Vec::with_capacity(size);
 
         for id in 0..size {
-            workers.push(Worker::new(id));
+            workers.push(Worker::new(id, receiver));
         }
 
         Ok(ThreadPool{
-            workers
+            workers,
+            sender,
         })
     }
 
@@ -30,21 +55,5 @@ impl ThreadPool {
         where
             F: FnOnce() + Send + 'static,
     {
-    }
-}
-
-struct Worker {
-    id: usize,
-    thread: thread::JoinHandle<()>,
-}
-
-impl Worker {
-    fn new(id: usize) -> Worker {
-        let thread = thread::spawn(|| {});
-
-        Worker {
-            id,
-            thread,
-        }
     }
 }
