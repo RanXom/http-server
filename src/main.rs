@@ -12,7 +12,9 @@ fn main() {
         let stream = stream.unwrap();
 
         println!("");
-        handle_connection(stream);
+        thread::spawn(|| {
+            handle_connection(stream);
+        });
     }
 }
 
