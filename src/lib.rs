@@ -18,12 +18,16 @@ struct Worker {
     thread: thread::JoinHandle<()>,
 }
 
-struct Job;
-
 impl Worker {
     fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Worker {
-        let thread = thread::spawn(|| {
-            receiver;
+        let thread = thread::spawn(move || {
+            loop {
+                let job = receiver.lock().unwrap().recv().unwrap();
+
+                println!("Worker {} got a job; executing.", id);
+
+                (*job)();
+            }
         });
 
         Worker {
@@ -32,6 +36,8 @@ impl Worker {
         }
     }
 }
+
+type Job = Box<dyn FnOnce() + Send + 'static>;
 
 impl ThreadPool {
     pub fn new(size: usize) -> Result<ThreadPool, PoolCreationError> {
@@ -55,9 +61,12 @@ impl ThreadPool {
         })
     }
 
-    pub fn execute<F>(&self, _f: F)
+    pub fn execute<F>(&self, f: F)
         where
             F: FnOnce() + Send + 'static,
     {
+        let job = Box::new(f);
+
+        self.sender.send(job).unwrap();
     }
 }
