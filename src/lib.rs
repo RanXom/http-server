@@ -8,6 +8,16 @@ pub enum PoolCreationError {
     ZeroSize,
 }
 
+trait FnBox {
+    fn call_box(self: Box<Self>);
+}
+
+impl<F: FnOnce()> FnBox for F {
+    fn call_box(self: Box<F>) {
+        (*self)();
+    }
+}
+
 pub struct ThreadPool {
     workers: Vec<Worker>,
     sender: mpsc::Sender<Job>
@@ -18,6 +28,8 @@ struct Worker {
     thread: thread::JoinHandle<()>,
 }
 
+type Job = Box<dyn FnBox + Send + 'static>;
+
 impl Worker {
     fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Worker {
         let thread = thread::spawn(move || {
@@ -26,7 +38,7 @@ impl Worker {
 
                 println!("Worker {} got a job; executing.", id);
 
-                (*job)();
+                job.call_box();
             }
         });
 
@@ -36,8 +48,6 @@ impl Worker {
         }
     }
 }
-
-type Job = Box<dyn FnOnce() + Send + 'static>;
 
 impl ThreadPool {
     pub fn new(size: usize) -> Result<ThreadPool, PoolCreationError> {
