@@ -1,9 +1,13 @@
+use std::thread;
+
 #[derive(Debug)]
 pub enum PoolCreationError {
     ZeroSize,
 }
 
-pub struct ThreadPool;
+pub struct ThreadPool {
+    threads: Vec<thread::JoinHandle<()>>,
+}
 
 impl ThreadPool {
     pub fn new(size: usize) -> Result<ThreadPool, PoolCreationError> {
@@ -11,13 +15,24 @@ impl ThreadPool {
             return Err(PoolCreationError::ZeroSize)
         }
 
-        Ok(ThreadPool)
+        let mut threads = Vec::with_capacity(size);
+
+        for _ in 0..size {
+            let handle = thread::spawn(|| {
+
+            });
+
+            threads.push(handle);
+        }
+
+        Ok(ThreadPool{
+            threads
+        })
     }
 
-    pub fn execute<F>(&self, f: F)
+    pub fn execute<F>(&self, _f: F)
         where
             F: FnOnce() + Send + 'static,
     {
-        
     }
 }
