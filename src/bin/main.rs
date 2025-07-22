@@ -1,3 +1,6 @@
+extern crate http_server;
+use http_server::ThreadPool;
+
 use std::thread;
 use std::time::Duration;
 use std::fs::File;
